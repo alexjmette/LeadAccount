@@ -1,0 +1,64 @@
+@isTest
+private class LeadImport_Test {
+    static testMethod void validateLeadImport() {
+        
+        //test that when a lead is created
+        //it is matched with an existing account, based on the company name
+        //if no matching account exists, a new one will be created
+        //and the lead linked with the new account
+        
+        list <Account> testAccounts = new list <Account>();
+
+            Account a = new Account(name='Acme');
+            testAccounts.add(a);
+        
+        	Account b = new Account(name='Bozon');
+            testAccounts.add(b);
+        
+        	Account c = new Account(name='Caladonia');
+            testAccounts.add(c);
+        
+        insert testAccounts;
+        
+        integer numberAccounts = [SELECT COUNT() FROM Account];
+        system.assertEquals(3, numberAccounts);
+        
+        list <Lead> testLeads = new list <Lead>();
+
+        	//test a lead with an exact match to an existing account
+            Lead l = new Lead(FirstName = 'John',
+                             LastName = 'Smith',
+                             Status = 'New' ,
+                             Company = 'Acme');
+        
+       						 testLeads.add(l);
+        
+			//test a lead with a fuzzy match to an existing account
+        	Lead m = new Lead(FirstName = 'Mohan',
+                             LastName = 'Srivasta',
+                             Status = 'New' ,
+                             Company = 'Caladonia Inc.');
+        
+       						 testLeads.add(m);
+        
+        	//test a lead with no match to existing account
+        	Lead n = new Lead(FirstName = 'Jenn',
+                             LastName = 'Sparrow',
+                             Status = 'New' ,
+                             Company = 'Dreamforce');
+        
+       						 testLeads.add(n);
+        
+        insert testLeads;
+        
+        integer numberLeads = [SELECT COUNT() FROM Lead];
+        system.assertEquals(3, numberLeads);
+        
+        //verify that 2 of the 3 leads were linked with an account
+        //the other lead should have been blocked by a duplicate rule
+        
+        integer leadsWithAccount = [SELECT COUNT() FROM Lead WHERE Account__c != null];
+        system.assertEquals(2, leadsWithAccount);
+    }  
+    
+}
