@@ -1,0 +1,65 @@
+public class LeadImport {
+    
+    public static void LinkAccount (list <Lead> newLeads) {
+    
+        /*match new lead company with existing accounts. 
+         * If no account is found, create a new account
+        */
+        
+	list <account> allAccounts = [SELECT Name, Id FROM Account];
+    
+	map <string,Id> companyMap = new map <string,Id>();
+        for (account a:allAccounts){companyMap.put(a.Name,a.Id);}        
+                
+        list <account> newAccounts = new list <account>();
+        
+        //for leads where a matching company-account isnt found
+        //create a new account
+
+        for (lead l:newLeads) {
+            if (companyMap.get(l.company) == null){
+                account a = new account();
+                a.Name = l.company;
+                newAccounts.add(a);
+            } 
+        }
+        
+        //remove duplicates
+        set <account> acctSet = new set <account>();
+        list <account> insertAccounts = new list <account>();
+        acctSet.addAll(newAccounts);
+        insertAccounts.addAll(acctSet);
+        
+        //insert new accounts, allow for partial success
+        //any leads who's company-account was blocked by duplicate rules 
+        //can be manually updated and re-imported
+            
+        Database.SaveResult[] srList = Database.insert(insertAccounts, false);
+        
+        for (Database.SaveResult sr : srList) {
+            integer i = 0;
+            if (sr.isSuccess()) {
+                i++;
+            } else {
+                for(Database.Error err : sr.getErrors()) {
+                    System.debug('The following error has occurred. Account: '+insertAccounts[i].Name  + err.getStatusCode() +': ' + err.getMessage());
+                    i++;
+                }
+            }
+        }
+       
+        //finish mapping leads with accounts
+       
+        list <Lead> updateLeads = new list <Lead>();
+        
+        for (Account acct: newAccounts) {
+            companyMap.put(acct.Name, acct.Id);
+        }
+               
+        for (lead l:newLeads) {
+            l.Account__c = companyMap.get(l.company); 
+        }
+        
+            
+    } //end of method
+} //end of class
